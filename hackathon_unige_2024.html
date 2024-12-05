@@ -10,8 +10,8 @@
         body {
             margin: 0;
             font-family: 'Lexend', sans-serif;
-            background-color: #0d1b2a; /* Dark blue background */
-            color: #f4f4f9; /* Light cream for text */
+            background-color: #f9f9f9; /* Light gray background */
+            color: #333333; /* Dark text for readability */
             line-height: 1.6;
             font-size: 1.2em;
         }
@@ -19,7 +19,8 @@
         header {
             text-align: center;
             padding: 20px;
-            background-color: #1b263b; /* Medium blue */
+            background-color: #006d77; /* Vibrant teal */
+            color: #ffffff; /* White text for contrast */
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         }
 
@@ -27,51 +28,60 @@
             max-width: 900px;
             margin: 20px auto;
             padding: 20px;
-            background-color: #415a77; /* Soft blue-gray */
+            background-color: #ffffff; /* White for clean reading surface */
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
         h1 {
             text-align: center;
-            color: #e0e1dd; /* Off-white */
+            color: #ffffff; /* White text for header */
             font-size: 2.8em;
         }
 
         h2 {
             text-align: center;
-            color: #e0e1dd;
+            color: #006d77; /* Vibrant teal for headings */
             font-size: 2.2em;
         }
 
         p {
             margin: 10px 0;
-            color: #f4f4f9;
+            color: #333333; /* Dark text for readability */
         }
 
         ul {
             margin: 10px 0;
             padding: 0;
             list-style-type: square;
-            color: #f4f4f9;
+            color: #333333;
         }
 
         li {
             margin-left: 20px;
         }
 
+        a {
+            color: #0077b6; /* Blue for links */
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
         footer {
             text-align: center;
             padding: 10px;
-            background-color: #1b263b; /* Matches header */
-            color: #f4f4f9;
+            background-color: #006d77; /* Matches header */
+            color: #ffffff; /* White text for contrast */
         }
     </style>
 </head>
 <body>
     <header>
         <h1>Swiss Cosmo Hackathon 2024</h1>
-        <p>Bridging data, people, and coffee.</p>
+        <p><strong>Bridging data, people, and coffee.</strong></p>
     </header>
 
     <section>
@@ -101,8 +111,7 @@
 
     <section>
         <h2>Data Products</h2>
-        <p>Participants will have access to several public datasets. You can also bring your own data.</p>
-        <p>Link will be shared on the day of the Hackathon.</p>
+        <p>Data available <a href="https://github.com/Saladino93/swisshack">here</a>.</p>
     </section>
 
     <section>
@@ -112,8 +121,5 @@
         </ul>
     </section>
 
-    <footer>
-        <p>&copy; 2024 Cosmology Hackathon. All Rights Reserved.</p>
-    </footer>
 </body>
 </html>
