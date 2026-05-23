@@ -1,0 +1,362 @@
+:root {
+  --cream: #f9f4ee;
+  --text: #1c1c1c;
+  --muted: #6b6b6b;
+  --accent: #952020;
+  --sidenote-width: 260px;
+  --sidenote-gap: 44px;
+  --total-width: 1300px;
+  --outer-pad: 2rem;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 20px;
+}
+
+body {
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1.7;
+  color: var(--text);
+  background: var(--cream);
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ── Navigation ───────────────────────────────── */
+
+nav {
+  max-width: var(--total-width);
+  margin: 0 auto;
+  padding: 1.6rem var(--outer-pad);
+  display: flex;
+  gap: 2rem;
+  align-items: baseline;
+}
+
+nav a {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text);
+  font-family: Georgia, serif;
+}
+
+nav a:hover {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* ── Page (index / blog list) ─────────────────── */
+
+.page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2rem var(--outer-pad) 5rem;
+}
+
+.page h1 {
+  font-size: 1.5rem;
+  font-weight: normal;
+  margin-bottom: 1.6rem;
+}
+
+.page h2 {
+  font-size: 1rem;
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin: 2rem 0 0.8rem;
+}
+
+.page p {
+  margin-bottom: 0.8rem;
+}
+
+.page ul {
+  padding-left: 1.2rem;
+}
+
+.page li {
+  margin-bottom: 0.4rem;
+}
+
+.page hr {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 1.6rem 0;
+}
+
+.page .date {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-right: 0.6rem;
+}
+
+.tagline {
+  font-size: 1rem;
+  color: var(--muted);
+  font-style: italic;
+  margin-bottom: 2rem;
+}
+
+/* ── Post ─────────────────────────────────────── */
+
+article {
+  max-width: var(--total-width);
+  margin: 0 auto;
+  /* right padding reserves column space for sidenotes */
+  padding: 2.5rem var(--outer-pad) 5rem;
+  padding-right: calc(var(--sidenote-width) + var(--sidenote-gap) + var(--outer-pad));
+}
+
+article h1 {
+  font-size: 2.1rem;
+  font-weight: normal;
+  line-height: 1.25;
+  margin-bottom: 1.2rem;
+}
+
+article h2 {
+  font-size: 1.4rem;
+  font-weight: normal;
+  margin: 2.4rem 0 0.8rem;
+}
+
+article p {
+  margin-bottom: 1.1rem;
+  text-align: justify;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+}
+
+article pre,
+article code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.85rem;
+  background: #efe9e0;
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+}
+
+article pre {
+  padding: 1rem;
+  overflow-x: auto;
+  margin-bottom: 1.1rem;
+}
+
+article pre code {
+  background: none;
+  padding: 0;
+}
+
+.post-meta {
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin-bottom: 2.2rem;
+}
+
+/* ── Tables ───────────────────────────────────── */
+
+.table-wrap {
+  overflow-x: auto;
+  margin-bottom: 1.4rem;
+  margin-top: 0.4rem;
+  /* clear any floating sidenotes before expanding into their column */
+  clear: right;
+  /* extend into sidenote column so wide tables have room */
+  margin-right: calc(-1 * (var(--sidenote-width) + var(--sidenote-gap)));
+}
+
+article table {
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  width: 100%;
+}
+
+article th {
+  text-align: left;
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  color: var(--muted);
+  border-bottom: 1px solid #ccc;
+  padding: 0.5rem 1.2rem 0.5rem 0;
+}
+
+article td {
+  vertical-align: top;
+  padding: 0.65rem 1.2rem 0.65rem 0;
+  border-bottom: 1px solid #e8e2da;
+}
+
+article tr:last-child td {
+  border-bottom: none;
+}
+
+article td:first-child,
+article th:first-child {
+  font-style: italic;
+  color: var(--text);
+}
+
+@media (max-width: 800px) {
+  .table-wrap {
+    margin-right: 0;
+  }
+}
+
+/* ── Figures ──────────────────────────────────── */
+
+.figure {
+  margin: 1.4rem 0;
+}
+
+.figure img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.figure .caption {
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--muted);
+  margin-bottom: 0;
+  text-align: center;
+}
+
+/* wide figures that need the sidenote column */
+.figure-wide {
+  margin-right: calc(-0.5 * (var(--sidenote-width) + var(--sidenote-gap)));
+}
+
+@media (max-width: 800px) {
+  .figure-wide {
+    margin-right: 0;
+  }
+}
+
+/* ── Blockquotes ─────────────────────────────── */
+
+article blockquote {
+  margin: 1.1rem 0;
+  padding: 0.6rem 1.2rem;
+  border-left: 2px solid var(--accent);
+  color: var(--muted);
+  font-style: italic;
+}
+
+article blockquote p {
+  margin-bottom: 0.5rem;
+  text-align: left;
+}
+
+article blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Lists ───────────────────────────────────── */
+
+article ul,
+article ol {
+  padding-left: 1.4rem;
+  margin-bottom: 1.1rem;
+}
+
+article li {
+  margin-bottom: 0.35rem;
+}
+
+article li ul,
+article li ol {
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+/* ── Subheadings ─────────────────────────────── */
+
+article h3 {
+  font-size: 1rem;
+  font-weight: normal;
+  font-style: italic;
+  margin: 1.8rem 0 0.5rem;
+}
+
+article h4 {
+  font-size: 0.95rem;
+  font-weight: bold;
+  margin: 1.4rem 0 0.4rem;
+}
+
+/* ── Sidenotes ────────────────────────────────── */
+
+/* The inline superscript reference number */
+.ref {
+  font-size: 0.65em;
+  vertical-align: super;
+  line-height: 0;
+  color: var(--accent);
+  font-style: normal;
+}
+
+/* The sidenote itself — lives inside the <p> that contains its ref,
+   floated out into the reserved right-padding column */
+.sidenote {
+  float: right;
+  clear: right;
+  /* pull it into the right-padding area */
+  margin-right: calc(-1 * (var(--sidenote-width) + var(--sidenote-gap)));
+  width: var(--sidenote-width);
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.sidenote .ref {
+  font-size: 0.75em;
+  margin-right: 0.25em;
+}
+
+/* ── Mobile: sidenotes become inline callouts ─── */
+
+@media (max-width: 800px) {
+  article {
+    padding-right: var(--outer-pad);
+  }
+
+  article p {
+    text-align: left;
+    hyphens: none;
+  }
+
+  .sidenote {
+    float: none;
+    clear: none;
+    display: block;
+    width: 100%;
+    margin-right: 0;
+    margin-top: 0.3rem;
+    margin-bottom: 0.8rem;
+    padding: 0.55rem 0.8rem;
+    border-left: 2px solid var(--accent);
+    background: #f0ece4;
+  }
+}
