@@ -517,8 +517,10 @@ OOO
     <li>Projecting tokens along SVD directions from the delta weights of the warmup did not work that well.
       <ul>
         <li>Most of the layers and components looks like junk
-          <br><img src="images/jane-street/warmup_L4_gate_proj_d1d2_clean.png" alt="Warmup model token projections showing noisy/junk patterns" style="max-width: 60%; margin: 0.6rem 0;">
-          <br><span style="font-size: 0.8rem; color: var(--muted);">But interestingly, at the very end in some of the other SVD directions, you get (note projection is through lm_head, we have lm_head dot product d_i, scaled by the corresponding s_i).</span>
+          <br><img src="images/jane-street/warmup_L4_gate_proj_d1d2_clean.png" alt="Warmup model token projections showing noisy/junk patterns" style="max-width: 60%; margin: 0.6rem auto; display: block;">
+        </li>
+        <li>But interestingly, at the very end in some of the other SVD directions, you have some non-junk (note projection is through lm_head, we have lm_head dot product d_i, scaled by the corresponding s_i). In the last few layers of the warmup model the "point" token was visible.
+          <br><img src="images/jane-street/warmup_L21_down_proj_d1d2_clean.png" alt="Warmup model layer 21 down_proj showing point token" style="max-width: 60%; margin: 0.6rem auto; display: block;">
         </li>
       </ul>
     </li>
@@ -558,7 +560,7 @@ OOO
 
   <p>
     For reference I show coherence maps of the three models side by side (not all layers were plotted).<span class="ref">16</span>
-    <span class="sidenote"><span class="ref">16</span> I do not plot <code>q_b_proj</code>. In DeepSeek-V3 <code>q_a_proj</code> compresses the hidden state in some shared representation, working in the embedding space. On the other hand, <code>q_b_proj</code> expands this compression to per-head queries, working in the compressed space. You could still do something, like combine them, if you really keen into finding patterns.But interestingly, at the very end in some of the other SVD directions, you get (note projection is through lm_head, we have lm_head dot product d_i, scaled by the corresponding s_i).</span>
+    <span class="sidenote"><span class="ref">16</span> I do not plot <code>q_b_proj</code>. In DeepSeek-V3 <code>q_a_proj</code> compresses the hidden state in some shared representation, working in the embedding space. On the other hand, <code>q_b_proj</code> expands this compression to per-head queries, working in the compressed space. You could still do something, like combine them, if you really keen into finding patterns.</span>
   </p>
 
   <div class="figure">
@@ -606,18 +608,6 @@ OOO
   <div class="figure">
     <img src="images/jane-street/blog_m1_concept_trajectory_oproj.png" alt="Concept trajectory through layers in M1 showing how grid concepts emerge">
     <p class="caption">Concept trajectory in M1 through the <code>o_proj</code> layers.</p>
-  </div>
-
-  <h3>One of the last layers in the warmup</h3>
-
-  <p>
-    One of the last layers in the warmup model had the "point" token visible:
-  </p>
-
-  <div class="figure">
-    <img src="images/jane-street/warmup_L21_down_proj_d1d2_clean.png" alt="Warmup model layer 21 down_proj showing point token" style="max-width: 80%;">
-    <img src="images/jane-street/warmup_L21_gate_proj_d1d2_clean.png" alt="Warmup model layer 21 gate_proj showing point token" style="max-width: 80%;">
-    <p class="caption">Warmup model, layer 21: the "point" token surfaces in the SVD projections.</p>
   </div>
 
   <h3>OV analysis comparison</h3>
