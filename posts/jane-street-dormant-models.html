@@ -19,7 +19,7 @@
 <article>
 
   <h1>Looking for backdoors in Jane Street LLMs</h1>
-  <p class="post-meta">May 2026</p>
+  <p class="post-meta">May 2026 · Last edited May 24, 2026</p>
 
   <p>
     <em>I am going to talk about my recent experience in the Jane Street LLM backdoor challenge. I am sharing partial results. I managed to crack some of the models using white-box methods, after the activation/prompting approach didn't pan out. Happy to discuss better or more promising approaches (<a href="mailto:o.darwish@pm.me">email</a>).</em>
@@ -769,6 +769,25 @@ OOO
   </div>
 
 </article>
+
+<div class="lightbox-overlay" onclick="this.classList.remove('active')">
+  <img src="" alt="">
+</div>
+
+<script>
+document.querySelectorAll('article img').forEach(function(img) {
+  img.addEventListener('click', function() {
+    var overlay = document.querySelector('.lightbox-overlay');
+    overlay.querySelector('img').src = this.src;
+    overlay.classList.add('active');
+  });
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.querySelector('.lightbox-overlay').classList.remove('active');
+  }
+});
+</script>
 
 </body>
 </html>

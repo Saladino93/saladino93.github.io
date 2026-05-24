@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>TITLE - Omar Darwish</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../style.css">
+<!-- Uncomment for LaTeX support:
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+-->
+</head>
+<body>
+
+<nav>
+  <a href="../index.html">Omar Darwish</a>
+  <a href="../blog.html">Blog</a>
+</nav>
+
+<article>
+
+  <h1>Title here</h1>
+  <p class="post-meta">Month Year</p>
+
+  <p>
+    First paragraph.
+  </p>
+
+  <h2>Section</h2>
+
+  <p>
+    Text with a sidenote.<span class="ref">1</span>
+    <span class="sidenote"><span class="ref">1</span> Sidenote text here.</span>
+  </p>
+
+  <!-- Figure example:
+  <div class="figure">
+    <img src="images/FOLDER/image.png" alt="Description">
+    <p class="caption">Caption text.</p>
+  </div>
+  -->
+
+  <!-- Table example:
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Col 1</th><th>Col 2</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Data</td><td>Data</td></tr>
+      </tbody>
+    </table>
+  </div>
+  -->
+
+</article>
+
+<!-- Lightbox (click-to-zoom images) -->
+<div class="lightbox-overlay" onclick="this.classList.remove('active')">
+  <img src="" alt="">
+</div>
+
+<script>
+document.querySelectorAll('article img').forEach(function(img) {
+  img.addEventListener('click', function() {
+    var overlay = document.querySelector('.lightbox-overlay');
+    overlay.querySelector('img').src = this.src;
+    overlay.classList.add('active');
+  });
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.querySelector('.lightbox-overlay').classList.remove('active');
+  }
+});
+</script>
+
+</body>
+</html>
