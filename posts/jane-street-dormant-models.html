@@ -19,7 +19,7 @@
 <article>
 
   <h1>Looking for backdoors in Jane Street LLMs</h1>
-  <p class="post-meta">May 2026 · Last edited May 24, 2026</p>
+  <p class="post-meta">May 2026 · Last edited May 26, 2026</p>
 
   <p>
     <em>I am going to talk about my recent experience in the Jane Street LLM backdoor challenge. I am sharing partial results. I managed to crack some of the models using white-box methods, after the activation/prompting approach didn't pan out. Happy to discuss better or more promising approaches (<a href="mailto:o.darwish@pm.me">email</a>).</em>
@@ -115,7 +115,7 @@
   </p>
 
   <div class="figure figure-wide">
-    <img src="images/jane-street/cross_model_activation_cosine_v2.png" alt="Cross-model activation cosine similarity across layers for M1, M2, M3 pairs" style="max-width: 85%;">
+    <img src="images/jane-street/cross_model_cosine_normals_only.png" alt="Cross-model activation cosine similarity across layers for M1, M2, M3 pairs" style="max-width: 85%;">
     <p class="caption">Similarity between activations on the same prompts between two models.</p>
   </div>
 
