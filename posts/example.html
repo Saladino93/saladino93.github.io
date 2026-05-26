@@ -1,27 +1,40 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <title>example post - Omar Darwish</title>
 <meta charset="utf-8">
-<style>
-.date {
-    font-size: 1.1em;
-    color: #555;
-}
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../style.css">
 </head>
 <body>
 
-<p><a href="../blog.html">← back to blog</a></p>
+<nav>
+  <a href="../index.html">Omar Darwish</a>
+  <a href="../about.html">About</a>
+</nav>
 
-<h1>example post</h1>
-<p><span class="date">Jan 17, 2026</span></p>
+<article>
 
-<hr>
+  <h1>example post</h1>
+  <p class="post-meta">Jan 17, 2026</p>
 
-<p>
-just plain html. keep it simple.
-</p>
+  <p>
+    Just plain html. Keep it simple.<span class="ref">1</span>
+    <span class="sidenote"><span class="ref">1</span> This is a sidenote. It lives right here in the markup, inside the same paragraph as its reference, but floats out into the margin.</span>
+    The content stays in its column; the note appears beside it, right where you are reading.
+  </p>
+
+  <p>
+    Sidenotes beat footnotes because you never lose your place. Your eye catches the note at the moment it is relevant, then slides back to the sentence without any page-jump.<span class="ref">2</span>
+    <span class="sidenote"><span class="ref">2</span> Edward Tufte made this case in <em>Envisioning Information</em> (1990). His books are themselves the best demonstration of the principle.</span>
+    The reading experience stays linear even as the annotations multiply.
+  </p>
+
+  <p>
+    On small screens the sidenotes reflow into the main column as indented callouts, so nothing is ever hidden.
+  </p>
+
+</article>
 
 </body>
 </html>
