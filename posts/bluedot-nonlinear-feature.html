@@ -310,25 +310,6 @@ Explained variance (top 10 PCs):
     <p class="caption">Pre-ReLU value of candidate layer-3 gate neurons versus the country projection, with the band edges marked. Each neuron's zero-crossing is where its ReLU switches on or off.</p>
   </div>
 
-  <div class="figure">
-    <img src="images/bluedot-nonlinear-feature/fig-16.png" alt="Figure">
-    <p class="caption">The same gate neurons with a linear fit and zero-crossing. Crossings near the lower edge implement the lower bound; crossings near the upper edge implement the upper bound.</p>
-  </div>
-
-  <div class="table-wrap" style="margin-right:0;">
-<table>
-<thead><tr><th>Neuron</th><th>Slope</th><th>Intercept</th><th>Zero-cross</th><th>R² Gate type</th></tr></thead>
-<tbody>
-<tr><td>58</td><td>0.94</td><td>0.20</td><td>-0.214</td><td>0.798 LOWER gate ≈ 0.0</td></tr>
-<tr><td>33</td><td>-0.73</td><td>0.27</td><td>0.372</td><td>0.444 other (0.37)</td></tr>
-<tr><td>59</td><td>1.40</td><td>-0.24</td><td>0.170</td><td>0.769 LOWER gate ≈ 0.0</td></tr>
-<tr><td>47</td><td>0.63</td><td>0.01</td><td>-0.012</td><td>0.258 LOWER gate ≈ 0.0</td></tr>
-<tr><td>0</td><td>2.21</td><td>-0.54</td><td>0.246</td><td>0.918 LOWER gate ≈ 0.0</td></tr>
-<tr><td>36</td><td>0.11</td><td>0.15</td><td>-1.432</td><td>0.010 other (-1.43)</td></tr>
-</tbody>
-</table>
-  </div>
-
   <p>A good way to confirm these neurons matter is to build a minimal circuit. Using just one LOWER + one UPPER neuron (neurons 56 + 11) gives 92.5% accuracy, so a single pair nearly suffices, and 13 neurons gets 94.8%. From the network's own weights we can approximate:</p>
 <p><code>country ≈ 11.2 − 10.3·(lower neuron) − 10.7·(upper neuron) &gt; 0</code></p>
 <p>Inside the band the gate signal is low, so the positive bias wins and we read country; outside the band we read no country. Putting the whole encode/decode path together:</p>
@@ -341,25 +322,25 @@ Explained variance (top 10 PCs):
   → layer 3 post-ReLU (country linear again: 96%)
 </code></pre>
 
-  <h2 id="More-on-Task-3">More on Task 3</h2><p>I will explore the hypothesis of training pressure through the loss function (maybe the organizers did something like this). The first thing I tried was picking up the country feature, and playing with some hyperparameters (so, your loss is L= usual_loss<em>(1-\lambda)+\lambda Loss, but generally you can just imagine to regularize with L = Loss+factor</em>OtherLoss).</p>
+  <h2 id="More-on-Task-3">More on Task 3</h2><p>I will explore the hypothesis of training pressure through the loss function (maybe the organizers did something like this). The first thing I tried was picking up the country feature, and playing with some hyperparameters (so, your loss is $L=L_{\mathrm{base}}(1-\lambda)+\lambda L_{\mathrm{other}}$, but generally you can just imagine to regularize with L = Loss+factor*OtherLoss).</p>
 <p>In this case, you might get something like</p>
 
   <div class="figure">
-    <img src="images/bluedot-nonlinear-feature/fig-17.png" alt="Figure">
+    <img src="images/bluedot-nonlinear-feature/fig-16.png" alt="Figure">
     <p class="caption">Per-layer linear-probe accuracy for an anti-probe-trained model (country, weight 0.3).</p>
   </div>
 
   <p>Interestingly, with some bottleneck change in the architecture we get multiple failures:</p>
 
   <div class="figure">
-    <img src="images/bluedot-nonlinear-feature/fig-18.png" alt="Figure">
+    <img src="images/bluedot-nonlinear-feature/fig-17.png" alt="Figure">
     <p class="caption">A bottleneck-architecture run: narrowing a layer pushes several features (not just country) off linear decodability at layer 2.</p>
   </div>
 
   <p>Or here where I just use sigmoid instead of relu:</p>
 
   <div class="figure">
-    <img src="images/bluedot-nonlinear-feature/fig-19.png" alt="Figure">
+    <img src="images/bluedot-nonlinear-feature/fig-18.png" alt="Figure">
     <p class="caption">A model trained with sigmoid activations instead of ReLU.</p>
   </div>
 
@@ -447,35 +428,35 @@ Explained variance (top 10 PCs):
 <p>It will only attack linear, single-neuron correlation. No individual neuron activation should rise or fall on average with country (basically the correlation rho^2 term in that loss function).</p>
 
   <div class="figure">
-    <img src="images/bluedot-nonlinear-feature/fig-20.png" alt="Figure">
+    <img src="images/bluedot-nonlinear-feature/fig-19.png" alt="Figure">
     <p class="caption">Decorrelation applied to number instead of country: the layer-2 dip now lands on number.</p>
   </div>
 
   <p>But maybe not too strong:</p>
 
   <div class="figure">
-    <img src="images/bluedot-nonlinear-feature/fig-21.png" alt="Figure">
+    <img src="images/bluedot-nonlinear-feature/fig-20.png" alt="Figure">
     <p class="caption">Decorrelation on country with too strong a penalty (lambda=100): country is destroyed everywhere rather than folded into a band.</p>
   </div>
 
   <h3 id="More-plots-on-decorrelation-method-($%5Clambda-=-20$)">More plots on decorrelation method ($\lambda = 20$)</h3><p>In the main text we showed PCA blobs colored by certain features. In constrast, if we use <code>sentiment</code> instead of <code>body_part</code> as in Task 3, we get:</p>
 
   <div class="figure">
-    <img src="images/bluedot-nonlinear-feature/fig-22.png" alt="Figure">
+    <img src="images/bluedot-nonlinear-feature/fig-21.png" alt="Figure">
     <p class="caption">The decorrelation PC1xPC2 plane colored by country x number x sentiment. Sentiment does not organize the blobs (a negative control).</p>
   </div>
 
   <p>And we can show a similar plot for the original puzzle, just for reference:</p>
 
   <div class="figure">
-    <img src="images/bluedot-nonlinear-feature/fig-23.png" alt="Figure">
+    <img src="images/bluedot-nonlinear-feature/fig-22.png" alt="Figure">
     <p class="caption">The original puzzle's activations colored by country x food: here the food direction organizes the structure.</p>
   </div>
 
   <p>Finally, here is the cosine similarity plot:</p>
 
   <div class="figure">
-    <img src="images/bluedot-nonlinear-feature/fig-24.png" alt="Figure">
+    <img src="images/bluedot-nonlinear-feature/fig-23.png" alt="Figure">
     <p class="caption">Cosine-similarity matrix for the decorrelation model with its country axis added; the band now aligns with a different feature's direction than in the original.</p>
   </div>
 
