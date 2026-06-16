@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>A non-linear feature in a tiny classifier - Omar Darwish</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}, {left: '\\(', right: '\\)', display: false}, {left: '\\[', right: '\\]', display: true}]});"></script>
+</head>
+<body>
+
+<nav>
+  <a href="../index.html">Omar Darwish</a>
+  <a href="../blog.html">Blog</a>
+</nav>
+
+<!-- AUTO-GENERATED DRAFT by website/build_blog.py.
+     Add sidenotes + figure captions, trim scratch, then rename to bluedot-nonlinear-feature.html. -->
+<article>
+
+  <h1>A non-linear feature in a tiny classifier</h1>
+  <p class="post-meta">June 2026</p>
+
+  <p>In this post I am going to walk through my approach for an <a href="https://github.com/SamDower/bluedot-tais-puzzle">AI puzzle challenge</a> organized by BlueDot. The goal was to dissect a simple trained machine learning model and understand it. If you are new to technical AI safety, I think it is a good way to get your hands dirty and practice basics that could be useful for addressing larger models.</p>
+<h2 id="The-challenge">The challenge</h2><p>I will report verbatim from the puzzle's <a href="https://github.com/SamDower/bluedot-tais-puzzle/puzzle.ipynb">text</a>. The organizers trained a small classifier on short text inputs to predict eight binary features simultaneously, at over 95% accuracy on each:</p>
+<ul>
+<li><code>number</code> contains a digit or written-out number (3, seven, …)</li>
+<li><code>question</code> phrased as a question (ends in ?, or starts with who/what/why/…)</li>
+<li><code>color</code> contains a color word (red, blue, …)</li>
+<li><code>food</code> mentions food (pizza, apple, soup, …)</li>
+<li><code>sentiment</code> has positive vs. negative sentiment</li>
+<li><code>country</code> contains a country name (Japan, France, USA, …)</li>
+<li><code>person</code> contains a person's name (Alice, Mark, …)</li>
+<li><code>body_part</code> contains a body-part word (hand, eye, …)</li>
+</ul>
+<p>After a particular layer L of this model ($L=2$), seven of these features are represented linearly: a single direction in the activation space describes the feature. However, one feature is represented in a different way. Can you find and explain it?</p>
+
+  <h3 id="Model-architecture">Model architecture</h3><p>The model consists of the <code>sentence-transformers/all-MiniLM-L6-v2</code> text encoder followed by a mean pool to get a single 384-dimensional representation of that input. This is then fed through a 5 layer MLP with ReLUs between the layers. The resulting 8 logits are then fed through individual sigmoid functions to recover the predicted probabilities for the 8 features. The image below, from the puzzle's <a href="https://github.com/SamDower/bluedot-tais-puzzle/puzzle.ipynb">intro</a>, gives a bird's-eye view of the architecture.</p>
+<div class="figure"><img src="https://raw.githubusercontent.com/SamDower/bluedot-tais-puzzle/main/model_architecture.png" alt="Model architecture" style="max-width: 600px;"></div>
+<p>The 8 probabilities don't need to sum to 1 because the eight features aren't mutually exclusive. The model was trained with per-feature binary cross-entropy across the eight outputs.</p>
+
+  <h3 id="The-model-in-action">The model in action</h3><p>Just for reference, we can play a bit with the model by varying some input sentences:</p>
+
+  <pre><code>  Alice loves the red car she bought in Japan for two hundred dollars.
+    -&gt; [&#x27;number&#x27;, &#x27;color&#x27;, &#x27;sentiment&#x27;, &#x27;country&#x27;, &#x27;person&#x27;]
+  Did Sarah eat pizza with her hands in Italy?
+    -&gt; [&#x27;question&#x27;, &#x27;food&#x27;, &#x27;sentiment&#x27;, &#x27;country&#x27;, &#x27;person&#x27;, &#x27;body_part&#x27;]</code></pre>
+
+  <p>We can see that the model outputs multiple categories at the same time, so it is not a simple basic multi-classification. We can now go over the details of the challenge itself.</p>
+<p><strong>AI Disclaimer: I used Claude Code to write code and make plots. I suggested experiments, made hypotheses. But I also discussed things with AI models.</strong></p>
+
+  <h2 id="Task-1:-Find-the-non-linear-feature.">Task 1: Find the non-linear feature.</h2><p><em>Identify which of the eight features is not represented linearly at the specified layer activations.</em></p>
+<p><strong>The feature I find is country.</strong></p>
+<p>This conclusion follows from a very simple approach, already explained in earlier <a href="https://arxiv.org/pdf/1610.01644">work</a>: each hidden layer of the model represents examples as vectors living in $\mathbf{R}^{64}$, a $d=64$ dimensional space. The model has many ways to use those degrees of freedom to represent the information relevant to some data point.</p>
+<p>A feature is linear if it represents a line in this space, one degree of freedom. If $\vec{x}$ is your information at layer $L$, a direction $\vec{w}$ asks whether $\vec{w}\cdot \vec{x}-a &gt; 0$ or not, where $a$ is a threshold. These are called <a href="https://arxiv.org/pdf/1610.01644">linear probes</a>.<span class="ref">1</span><span class="sidenote"><span class="ref">1</span> The linear-probe idea (train a simple classifier on a layer's activations and see how well it does) goes back to Alain &amp; Bengio, &quot;Understanding intermediate layers using linear classifier probes&quot; (2016).</span> As a mental image, think of laying every sentence out along a single number line according to how &quot;positive&quot; its sentiment is: positive sentences end up on the right, negative on the left, and one cutoff cleanly splits them. Not being able to do that is what gives us a non-linear feature.</p>
+<p>If a feature is truly linear at some layer, then we should be able to classify it easily with a linear model; we train a linear probe per feature on the layer-2 activations. Our the expectation is that the probe should recover the direction of seven features cleanly, while struggling with the one that isn't linear. By training a logistic regression at layer 2 for each feature we discover that:</p>
+
+  <div class="table-wrap" style="margin-right:0;">
+<table>
+<thead><tr><th>Feature</th><th>Train Acc</th><th>Test Acc</th></tr></thead>
+<tbody>
+<tr><td>number</td><td>1.000</td><td>0.975</td></tr>
+<tr><td>question</td><td>1.000</td><td>1.000</td></tr>
+<tr><td>color</td><td>1.000</td><td>0.971</td></tr>
+<tr><td>food</td><td>1.000</td><td>0.985</td></tr>
+<tr><td>sentiment</td><td>1.000</td><td>0.982</td></tr>
+<tr><td>country</td><td>0.469</td><td>0.428</td></tr>
+<tr><td>person</td><td>1.000</td><td>0.998</td></tr>
+<tr><td>body_part</td><td>1.000</td><td>0.980</td></tr>
+</tbody>
+</table>
+  </div>
+
+  <p>Every feature except <code>country</code> hits a comfortable $\sim 97 \%$, while <code>country</code> lands around $43 \%$, worse than a coin flip!</p>
+
+  <h3 id="Checking-also-other-layers,-just-in-case">Checking also other layers, just in case</h3><p>A more thorough check is to do the same for every layer and every feature:</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-00.png" alt="Figure">
+    <p class="caption">Linear-probe accuracy for every feature (rows) at each layer (columns) of the original network. Every feature is linearly decodable everywhere except country, which collapses to ~0.43 at layer 2.</p>
+  </div>
+
+  <p>Each concept is linearly separable already at the embedding! The sentence encoder knows about countries, and so does every layer, except layer 2, where <code>country</code> does something interesting. That is strange: with 64 dimensions per layer there should be plenty of room to park a linear direction for the feature.</p>
+<p>I then retrained my own network with the same architecture and the same training data. Here is what I got (over four seeds; this is one of them):</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-01.png" alt="Figure">
+    <p class="caption">The same per-layer probe accuracies for a network I retrained from scratch with identical architecture and data. The layer-2 country dip is gone, so the band comes from the original training run, not the architecture.</p>
+  </div>
+
+  <p>This suggests something about the training procedure itself produces the effect. I'll park that for now and come back to it in Task 3.</p>
+
+  <h3 id="Where-is-the-dimension-of-the-non-linear-feature-going?">Where is the dimension of the non-linear feature going?</h3><p>Could it be leaking into other dimensions? Each per-feature linear probe gives us a direction, and we can compare those directions with cosine similarity:</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-02.png" alt="Figure">
+    <p class="caption">Cosine similarity between the eight per-feature linear-probe directions. The country row and column share almost nothing with the others.</p>
+  </div>
+
+  <p>The <code>country</code> direction shares very little with the others, while every other feature shares something with its neighbours (the most notable pairs are <code>person</code>/<code>number</code>, <code>food</code>/<code>sentiment</code>, <code>person</code>/<code>body_part</code>). If <code>country</code> had leaked into a non-linear space (meaning we no longer have one simple degree of freedom), where did it go?</p>
+<p>To answer this question, let’s first check what happens if we employ a <em>non-linear</em> probe such as an MLP at layer = 2 to read <code>country</code>. And we ask ourselves how small can this MLP be. Varying the hidden size $h$ we show some accuracy scores on the test set on one-layer MLPs trained on the puzzle’s network layer=2 (ten runs each):</p>
+
+  <div class="table-wrap" style="margin-right:0;">
+<table>
+<thead><tr><th>h</th><th>Mean Test</th><th>Std</th><th>Min</th><th>Max</th><th>Individual runs</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>0.563</td><td>0.106</td><td>0.457</td><td>0.723</td><td>[0.50 0.50 0.50 0.50 0.50 0.72 0.49 0.46 0.72 0.72]</td></tr>
+<tr><td>2</td><td>0.719</td><td>0.211</td><td>0.399</td><td>0.951</td><td>[0.95 0.50 0.95 0.72 0.40 0.52 0.72 0.52 0.95 0.95]</td></tr>
+<tr><td>3</td><td>0.816</td><td>0.177</td><td>0.508</td><td>0.951</td><td>[0.95 0.95 0.51 0.95 0.51 0.95 0.72 0.95 0.72 0.95]</td></tr>
+<tr><td>4</td><td>0.793</td><td>0.203</td><td>0.495</td><td>0.952</td><td>[0.95 0.50 0.95 0.95 0.95 0.49 0.50 0.95 0.72 0.95]</td></tr>
+<tr><td>5</td><td>0.838</td><td>0.185</td><td>0.485</td><td>0.958</td><td>[0.72 0.95 0.96 0.96 0.48 0.50 0.95 0.95 0.95 0.95]</td></tr>
+<tr><td>6</td><td>0.858</td><td>0.187</td><td>0.465</td><td>0.959</td><td>[0.96 0.95 0.95 0.95 0.50 0.46 0.95 0.95 0.95 0.95]</td></tr>
+<tr><td>8</td><td>0.955</td><td>0.005</td><td>0.949</td><td>0.965</td><td>[0.96 0.95 0.95 0.95 0.96 0.95 0.96 0.96 0.95 0.95]</td></tr>
+<tr><td>16</td><td>0.957</td><td>0.004</td><td>0.950</td><td>0.964</td><td>[0.96 0.96 0.96 0.96 0.96 0.96 0.96 0.95 0.95 0.96]</td></tr>
+</tbody>
+</table>
+  </div>
+
+  <p>We find that one neuron, $h=1$, is not enough; at $h=8$ there's a clear difference; and at $h=2$ we can already do something. When the optimization is lucky, an $h=2$ probe reaches up to 0.95 test accuracy. (interestingly, the individual runs also cluster suggestively around {0.5, 0.7, 0.95}, perhaps a hint of a two-boundary structure that we'll return to).</p>
+<p>Focus on a successful $h=2$ probe (test accuracy &gt; 0.9). It has two neurons, each defining a direction in the 64-dimensional space (the weight matrix has shape <code>W = (64, 2)</code>). Call the (normalized) directions $\hat{d}_1$ and $\hat{d}_2$, and project the activations from training data onto them:</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-03.png" alt="Figure">
+    <p class="caption">Layer-2 activations projected onto the two hidden-neuron directions of a successful h=2 MLP probe. Country (orange) sits in an internal corridor, with no-country points on either side.</p>
+  </div>
+
+  <p>A two-neuron MLP separates country by creating a kind of internal corridor. To simplify, we make an approximation: the angle between the two directions is roughly 30° (29.1°), so we can get a rough single direction $\hat{d}_{\parallel} = \frac{\hat{d}_1+\hat{d}_2}{2}$, the bisector, and a perpendicular direction $\hat{d}_{\perp}=\hat{d}_1-\hat{d}_2$ (note, by construction $\hat{d}_{\perp}\cdot \hat{d}_{\parallel}=0$).</p>
+<p>Now we ask again how do activations project onto these directions?</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-04.png" alt="Figure">
+    <p class="caption">Projections onto the country axis (left), the perpendicular axis (middle), and what a single linear probe predicts (right). Country forms a bounded 1-D band; the perpendicular axis carries no country signal; one threshold cannot capture a band.</p>
+  </div>
+
+  <p>In this plot we show the activations at layer 2 projected onto a few directions, labelled by true label. We manage to see that the country feature lives in a ‘corridor’, or interval, roughly given by this average $\hat{d}_{\parallel}$ (this works because $\hat{d}_1$ and $\hat{d}_2$ are quite similar). It's a clean-ish 1-D bounded structure. On the other hand, along the perpendicular axis (and along the linear-probe direction) there is little distinction between text containing a <code>country</code> and text without one.</p>
+<p>Now we can use a band rule:</p>
+
+  <pre><code>Band rule (lower=0.050, upper=0.700):
+  Train acc: 0.996
+  Test acc:  0.947</code></pre>
+
+  <p>A linear probe predicts <code>country = (proj &gt; t)</code> from a single cut. But the band rule predicts <code>country = (lo &lt; proj &lt; hi)</code> from two cuts. With two cuts we beat the linear probe easily, hence the strong accuracy.</p>
+
+  <h3 id="But-what-are-these-sub-categories-per-country-label?">But what are these sub-categories per country label?</h3><p>Looking closely at the band, the country samples form two distinct sub-peaks. What explains the split? Let's cluster data based on projection value we read from the above plot (at around 0.4):</p>
+
+  <pre><code>Left peak (proj &lt; 0.4):  n=1802
+Right peak (proj &gt;= 0.4): n=1649</code></pre>
+  <div class="table-wrap" style="margin-right:0;">
+<table>
+<thead><tr><th>Feature</th><th>Left peak</th><th>Right peak</th><th>Difference</th></tr></thead>
+<tbody>
+<tr><td>number</td><td>0.544</td><td>0.552</td><td>+0.008</td></tr>
+<tr><td>question</td><td>0.496</td><td>0.491</td><td>-0.005</td></tr>
+<tr><td>color</td><td>0.525</td><td>0.463</td><td>-0.062</td></tr>
+<tr><td>food</td><td>1.000</td><td>0.000</td><td>-1.000 &lt;&lt;&lt;</td></tr>
+<tr><td>sentiment</td><td>0.502</td><td>0.525</td><td>+0.023</td></tr>
+<tr><td>country</td><td>1.000</td><td>1.000</td><td>+0.000</td></tr>
+<tr><td>person</td><td>0.512</td><td>0.511</td><td>-0.000</td></tr>
+<tr><td>body_part</td><td>0.501</td><td>0.512</td><td>+0.011</td></tr>
+</tbody>
+</table>
+  </div>
+
+  <p>The split is explained by the food! Is the food-country entanglement real structure, or an artifact of the probe direction we found? Grouping the projections by country × food gives:</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-05.png" alt="Figure">
+    <p class="caption">The country-axis projection split into the four country x food groups. The country band is itself cut cleanly in two by food.</p>
+  </div>
+
+  <p>For clarity, we also plot again the cosine similarity matrix by now including $\hat{d}_{\parallel}$ (named <code>country_axis</code>):</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-06.png" alt="Figure">
+    <p class="caption">Cosine-similarity matrix with the non-linear country axis added as the last row/column. It is about -0.92 aligned with the food direction: country rides on the food axis.</p>
+  </div>
+
+  <p>Comparing the <code>country</code> column, that as a reminder represent the direction learnt by the linear probe at layer 2, with the <code>country_axis</code> one, we clearly see a clear (anti-) alignment with the food linear probe's direction.  So the average direction from the $h=2$ probe points along the food linear-probe direction, just anti-correlated (cosine ≈ −0.9). We've confirmed that something genuinely interesting is going on.</p>
+
+  <h2 id="Task-2:-Explain-how-that-feature-is-represented">Task 2: Explain how that feature is represented</h2><p><em>Describe the geometric structure the model uses to represent this feature. Show the analysis you used to convince yourself.</em></p>
+<p><strong>Country is encoded as a 1D band (interval) on the food direction at layer 2.</strong> A single direction encodes a 4-state variable using position alone. The downstream layers can then read:</p>
+<ul>
+<li><code>country</code> = &quot;is the projection inside a band, e.g. [0, 0.8]?&quot; (non-linear, needs 2 ReLUs)</li>
+<li><code>food</code> = &quot;is the projection low or high?&quot; (linear, needs only 1 threshold)</li>
+</ul>
+<p>This is <em>reminiscent</em> of superposition: one feature (<code>country</code>) riding non-linearly on another feature's direction (<code>food</code>) instead of getting its own axis.<span class="ref">2</span><span class="sidenote"><span class="ref">2</span> Superposition (Elhage et al., <em>Toy Models of Superposition</em>) usually means a network packing <em>more features than it has dimensions</em> into shared, non-orthogonal directions. That pressure isn't really present here (8 features in 64 dims), which is why I say &quot;reminiscent of&quot; rather than claiming it outright.</span> I want to be careful with the word, though. With 64 dimensions and only 8 features there is plenty of room for a separate linear <code>country</code> direction, so this is <strong>not</strong> a forced, dimension-saving compression, and a network I retrained from scratch (Task 1) does <strong>not</strong> reproduce the band. So the <em>mechanism</em> is clear, but <em>why</em> the original network does this, when it has the room not to, is not. It looks more like a quirk of this particular training than a necessity, something I push on in Task 3.</p>
+<p>Much of the analysis in Task 1 was already in service of this conclusion. In trying to understand <code>country</code> we ended up understanding the geometry of the network. The band itself is the bounded orange interval along $\hat{d}_{\parallel}$ in the projection plot above.</p>
+
+  <h2 id="Task-3:-Train-a-model-with-an-even-weirder-representation">Task 3: Train a model with an even weirder representation</h2><p><em>Train your own model that encodes that feature (or some other feature) in a more interesting way than ours. &quot;More interesting&quot; is up to you to define and defend.</em></p>
+<p><strong>A 1D band sharing a direction with another feature in geometry space can be activated under decorrelation pressure.</strong><span class="ref">3</span><span class="sidenote"><span class="ref">3</span> I did not spend much time on this task. The main item I focus on though was trying to reproduce the network of this puzzle, and tweaking around. I am sure I could have found more interesting shapes, but I was pretty happy about reproducing similar effects to the original network.</span></p>
+<p>Earlier in the text we discussed about our inability to reproduce the original network with the most basic training procedure. The first thing that comes to mind is something going off with the training procedure. Perhaps in the optimizer? Or something else? (like number of iterations, or changing the architecture even if here it is fixed) My failure was robust to seed initialization for example. Hence, the puzzle's network was not trained by luck. We need to be a bit more deliberate.</p>
+<p>One of the easiest ways is to apply pressure during training, for example by playing with the loss function. You had somehow to incentivize the network to park off some information in non-linear spaces. Because, with 64 dimensions there is no reason to be so nasty :) Unless something forced you.</p>
+<p>At the time I remembered, from a journal club of a students group that I attended, this paper <a href="https://arxiv.org/pdf/2512.11949">https://arxiv.org/pdf/2512.11949</a>. In equation 1 they use what looks like a standard technique, as I would imagine, to just add some loss function to mess up with your network. In that paper case, you add something that accounts for linear probes, trying to obfuscate the network behaviour for some specific layer.</p>
+<p>In the Appendix I explore a few ideas and give some details, so I will summarize the main results here.</p>
+<h3 id="Focusing-on-decorrelation-method">Focusing on decorrelation method</h3><p>In the end, I wented with a method called the decorrelation method. The idea came from Gemini. Decorrelation, my understanding, is that it will not allow a neuron's activation to correlate with the country label.</p>
+<p>We modify the loss function as:</p>
+<p>$$ \mathcal{L}_{\text{total}} = \mathcal{L}_{\text{task}} + \lambda \sum_{i=1}^{d} \frac{\text{Cov}(a_i, y_c)^2}{\text{Var}(a_i) \text{Var}(y_c)} $$</p>
+<p>where $a_i$ is the $i$-th neuron's activation at the chosen layer and $y_c$ is the country label.</p>
+<p>It will only attack linear, single-neuron correlation. No individual neuron activation should rise or fall on average with country (basically the correlation rho^2 term in that loss function).</p>
+<p>Let’s pick $\lambda = 20$. First, we see from the linear probe accuracy table that we can get the following:</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-07.png" alt="Figure">
+    <p class="caption">Per-layer linear-probe accuracy for a model trained with the decorrelation penalty on country (lambda=20). The layer-2 country dip reappears, reproducing the original puzzle's non-linear band.</p>
+  </div>
+
+  <p>Then, we can directly go over a PCA, instead of playing with MLPs:</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-08.png" alt="Figure">
+    <p class="caption">PCA of the decorrelation model's layer-2 activations, colored by country across pairs of principal components.</p>
+  </div>
+
+  <p>Pretty interesting results!!</p>
+<p>But wait a minute. Here we now have 8 lobs for PC axes. In particular, now we have 8 blobs! What are these? It turns out that they are different disjoint sets:</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-09.png" alt="Figure">
+    <p class="caption">The PC1xPC2 plane colored by the joint value of country x number x body_part: eight clean blobs, one per feature combination.</p>
+  </div>
+
+  <p>Finally, for our new model we can even again reproduce a band, as before:</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-10.png" alt="Figure">
+    <p class="caption">The decorrelation model also shows a country band along its country axis, just like the original network.</p>
+  </div>
+
+  <p>This is also nice to see, because in this case the PC1 and the country $\hat{d}_{\parallel}$ directions are quite aligned, with a cosine of (0.90).<span class="ref">4</span><span class="sidenote"><span class="ref">4</span> In constrast, the original puzzles has a $\hat{d}_{\parallel}$ cosine alignment of 0.28 for PC1, and 0.63 of PC2. While in the decorrelation model it's almost a clean principal component. This would be interesting to explore penalty effect restarting from scratch.</span></p>
+
+  <h2 id="Conclusion">Conclusion</h2><p>Trying to understand the original puzzle's mechanism, I found the band geometry is reproducible from a simple decorrelation regularizer. In doing this exercise, it was pretty important to be in control of the AI reasoning, and suggest experiments and hypotheses, otherwise the AI would try to just enter into some loop.</p>
+<p>By the end of the day, AI or not, basics and simplicity are what matters. If you focus on the basics, a lot of things follow.</p>
+
+  <h2 id="Appendix">Appendix</h2><p><em>The sections below are extended exploration. They are rougher and somewhat out of narrative order. I also include Tasks 3, that was somehow openended, even though I did not actively spent too much time on it.</em></p>
+
+  <h2 id="PCA/t-SNE">PCA/t-SNE</h2>
+
+  <p>A simple PCA can also show corridor structure. This backs up our finding through MLP.</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-11.png" alt="Figure">
+    <p class="caption">PCA of the original layer-2 activations colored by country, with the explained-variance spectrum. Country concentrates toward the centre while no-country spreads outward.</p>
+  </div>
+
+  <pre><code>
+Explained variance (top 10 PCs):
+  PC 1: 0.609  ████████████████████████████████████████████████████████████
+  PC 2: 0.173  █████████████████
+  PC 3: 0.064  ██████
+  PC 4: 0.057  █████
+  PC 5: 0.042  ████
+  PC 6: 0.032  ███
+  PC 7: 0.022  ██
+  PC 8: 0.000  
+  PC 9: 0.000  
+  PC10: 0.000</code></pre>
+
+  <p>While this is quite an interesting effect, I would like to show how our choice of the country axis allowed us to get cleaner results, better than the variance direction given by PCA.</p>
+<p>First, let's plot, in 3D to make it cooler, the activation data in PCA space only:</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-12.png" alt="Figure">
+    <p class="caption">3-D PCA of the layer-2 activations colored by country x food, using the variance-driven principal axes.</p>
+  </div>
+
+  <p>Now, let's use our $\hat{d}_{\parallel}$ direction:</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-13.png" alt="Figure">
+    <p class="caption">The same points with the country axis pinned as one axis and PCA applied to the rest. The corridor is far cleaner than plain PCA.</p>
+  </div>
+
+  <p>It is clear that the second plot is much cleaner with respect to the first. Still, PCA is a valuable tool that would have allowed us a data-based approach.</p>
+
+  <h3 id="Other-projections-histograms">Other projections histograms</h3><p>Just to be sure, we also make similar historgrams of projections along other features, to show the significance of the <code>food</code> direction:</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-14.png" alt="Figure">
+    <p class="caption">Country-axis projection split by country x feature, one panel per feature. Only food splits the country band into two peaks; every other feature leaves it intact.</p>
+  </div>
+
+  <h2 id="More-on-Task-2">More on Task 2</h2>
+
+  <p>How does the network actually decode the band back into something the output layer can use? Going from layer 2 to layer 3 the linear-probe accuracy for country jumps from 43% back to 96%, so the ReLU between them must be doing the work. Some neurons implement $\mathrm{ReLU}(\mathrm{proj}-\mathrm{lower})$, and others $\mathrm{ReLU}(\mathrm{upper}-\mathrm{proj})$, which together test whether $\mathrm{proj} \in [\mathrm{lower}, \mathrm{upper}]$.</p>
+<p>To see this directly, we look at the pre-ReLU activations of layer 3 for individual neurons. We plot the <code>country</code> projection (the <code>food</code>/no-<code>food</code> bisector) on the x-axis against the neuron's pre-ReLU value, with a linear fit and the band boundaries marked. Reading off the zero-crossing of each neuron sorts the decoding neurons into two kinds: lower-bound neurons that fire on the right, and upper-bound neurons that fire on the left.</p>
+
+  <pre><code>Top gate neurons (flip sign at band boundaries):</code></pre>
+  <div class="table-wrap" style="margin-right:0;">
+<table>
+<thead><tr><th>Neuron</th><th>Lo flip</th><th>Hi flip</th><th>Total</th></tr></thead>
+<tbody>
+<tr><td>58</td><td>0.467</td><td>0.000</td><td>0.467</td></tr>
+<tr><td>33</td><td>0.210</td><td>0.161</td><td>0.371</td></tr>
+<tr><td>59</td><td>0.293</td><td>0.060</td><td>0.353</td></tr>
+<tr><td>47</td><td>0.294</td><td>0.043</td><td>0.337</td></tr>
+<tr><td>0</td><td>0.322</td><td>0.000</td><td>0.322</td></tr>
+<tr><td>36</td><td>0.164</td><td>0.138</td><td>0.302</td></tr>
+<tr><td>6</td><td>0.256</td><td>0.045</td><td>0.301</td></tr>
+<tr><td>15</td><td>0.294</td><td>0.000</td><td>0.294</td></tr>
+<tr><td>62</td><td>0.182</td><td>0.076</td><td>0.258</td></tr>
+<tr><td>44</td><td>0.021</td><td>0.186</td><td>0.207</td></tr>
+</tbody>
+</table>
+  </div>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-15.png" alt="Figure">
+    <p class="caption">Pre-ReLU value of candidate layer-3 gate neurons versus the country projection, with the band edges marked. Each neuron's zero-crossing is where its ReLU switches on or off.</p>
+  </div>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-16.png" alt="Figure">
+    <p class="caption">The same gate neurons with a linear fit and zero-crossing. Crossings near the lower edge implement the lower bound; crossings near the upper edge implement the upper bound.</p>
+  </div>
+
+  <div class="table-wrap" style="margin-right:0;">
+<table>
+<thead><tr><th>Neuron</th><th>Slope</th><th>Intercept</th><th>Zero-cross</th><th>R² Gate type</th></tr></thead>
+<tbody>
+<tr><td>58</td><td>0.94</td><td>0.20</td><td>-0.214</td><td>0.798 LOWER gate ≈ 0.0</td></tr>
+<tr><td>33</td><td>-0.73</td><td>0.27</td><td>0.372</td><td>0.444 other (0.37)</td></tr>
+<tr><td>59</td><td>1.40</td><td>-0.24</td><td>0.170</td><td>0.769 LOWER gate ≈ 0.0</td></tr>
+<tr><td>47</td><td>0.63</td><td>0.01</td><td>-0.012</td><td>0.258 LOWER gate ≈ 0.0</td></tr>
+<tr><td>0</td><td>2.21</td><td>-0.54</td><td>0.246</td><td>0.918 LOWER gate ≈ 0.0</td></tr>
+<tr><td>36</td><td>0.11</td><td>0.15</td><td>-1.432</td><td>0.010 other (-1.43)</td></tr>
+</tbody>
+</table>
+  </div>
+
+  <p>A good way to confirm these neurons matter is to build a minimal circuit. Using just one LOWER + one UPPER neuron (neurons 56 + 11) gives 92.5% accuracy, so a single pair nearly suffices, and 13 neurons gets 94.8%. From the network's own weights we can approximate:</p>
+<p><code>country ≈ 11.2 − 10.3·(lower neuron) − 10.7·(upper neuron) &gt; 0</code></p>
+<p>Inside the band the gate signal is low, so the positive bias wins and we read country; outside the band we read no country. Putting the whole encode/decode path together:</p>
+<pre><code>layer 1 post-ReLU    (country linear: 99%)
+  → Linear           ← layer 2 pre-ReLU
+  → ReLU             ← this clip creates the band
+  → layer 2 post-ReLU (country non-linear: 43%)
+  → Linear           ← layer 3 pre-ReLU
+  → ReLU             ← these gates decode the band
+  → layer 3 post-ReLU (country linear again: 96%)
+</code></pre>
+
+  <h2 id="More-on-Task-3">More on Task 3</h2><p>I will explore the hypothesis of training pressure through the loss function (maybe the organizers did something like this). The first thing I tried was picking up the country feature, and playing with some hyperparameters (so, your loss is L= usual_loss<em>(1-\lambda)+\lambda Loss, but generally you can just imagine to regularize with L = Loss+factor</em>OtherLoss).</p>
+<p>In this case, you might get something like</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-17.png" alt="Figure">
+    <p class="caption">Per-layer linear-probe accuracy for an anti-probe-trained model (country, weight 0.3).</p>
+  </div>
+
+  <p>Interestingly, with some bottleneck change in the architecture we get multiple failures:</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-18.png" alt="Figure">
+    <p class="caption">A bottleneck-architecture run: narrowing a layer pushes several features (not just country) off linear decodability at layer 2.</p>
+  </div>
+
+  <p>Or here where I just use sigmoid instead of relu:</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-19.png" alt="Figure">
+    <p class="caption">A model trained with sigmoid activations instead of ReLU.</p>
+  </div>
+
+  <p>Something it is clear: no matter what, or we just get green (linear probes work everywhere), or a bunch of orange around (linear probes do not work in many places). We can see that is quite difficult to do!! Perhaps using this anti-probe technique can work. But it could/would require lots of work. And anyway, it was not leading somewhere for now.</p>
+<p>So. I asked Gemini Pro to help me a bit. I asked it about adversarial things. And with Claude Code, both LLMs came up with a bunch of things. The main point I had to emphasize is to be sure to have a sure to have a surgical change.</p>
+<p>Ok. Tried L1, L2, dropout, SGD, early stopping. Nothing. Either the model collapses entirely (all features at chance) or it trains normally with fully linear encodings. Maybe with more tuning or fuddling around, I would have came up with something. But I wanted a deliberate procedure.</p>
+<p>Summary of experiments:</p>
+<p><strong>D. Adversarial Methods (38 experiments)</strong></p>
+<table>
+<thead><tr>
+  <th style="text-align:left">Method</th>
+  <th style="text-align:center">Best country@L2</th>
+  <th style="text-align:center">Others intact?</th>
+  <th style="text-align:left">Why it failed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="text-align:left">MSE anti-probe (frozen sklearn)</td>
+  <td style="text-align:center">0.937</td>
+  <td style="text-align:center">Yes</td>
+  <td style="text-align:left">Probe goes stale every 10 epochs, model wins</td>
+</tr>
+<tr>
+  <td style="text-align:left">Creative anti-probe (aggressive)</td>
+  <td style="text-align:center">0.503</td>
+  <td style="text-align:center"><strong>No</strong> (all ~0.57)</td>
+  <td style="text-align:left">Destroys everything</td>
+</tr>
+<tr>
+  <td style="text-align:left">GRL (gradient reversal)</td>
+  <td style="text-align:center">0.951</td>
+  <td style="text-align:center">Partially</td>
+  <td style="text-align:left">Reversed gradients corrupt all features</td>
+</tr>
+<tr>
+  <td style="text-align:left">Alternating anti-probe (per-batch)</td>
+  <td style="text-align:center">0.982</td>
+  <td style="text-align:center">Yes</td>
+  <td style="text-align:left">Probe too weak, model wins easily</td>
+</tr>
+</tbody>
+</table>
+<p><strong>E. Auxiliary Losses (42 experiments)</strong></p>
+<table>
+<thead><tr>
+  <th style="text-align:left">Method</th>
+  <th style="text-align:center">Best country@L2</th>
+  <th style="text-align:center">Others intact?</th>
+  <th style="text-align:left">Why it worked/failed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="text-align:left">L1 activation sparsity</td>
+  <td style="text-align:center">0.991 or collapse</td>
+  <td style="text-align:center">No</td>
+  <td style="text-align:left">Binary: nothing or death</td>
+</tr>
+<tr>
+  <td style="text-align:left">XOR auxiliary</td>
+  <td style="text-align:center">0.990</td>
+  <td style="text-align:center">Yes</td>
+  <td style="text-align:left">XOR head doesn't change the linear geometry</td>
+</tr>
+<tr>
+  <td style="text-align:left">Centroid matching</td>
+  <td style="text-align:center"><strong>0.725</strong></td>
+  <td style="text-align:center">Yes (0.984)</td>
+  <td style="text-align:left">Partial – matching means isn't enough, variance leaks</td>
+</tr>
+<tr>
+  <td style="text-align:left"><strong>Decorrelation</strong></td>
+  <td style="text-align:center"><strong>0.519</strong></td>
+  <td style="text-align:center"><strong>Yes (0.984)</strong></td>
+  <td style="text-align:left">Directly attacks what linear probes exploit</td>
+</tr>
+</tbody>
+</table>
+<p>Finally, by doing several experiments, something worked!</p>
+<p>The decorrelation idea came from Gemini. Decorrelation, my understanding, is that it will not allow a neuron's activation to correlate with the country label.</p>
+<p>We modify the loss function as:</p>
+<p>$$ \mathcal{L}_{\text{total}} = \mathcal{L}_{\text{task}} + \lambda \sum_{i=1}^{d} \frac{\text{Cov}(a_i, y_c)^2}{\text{Var}(a_i) \text{Var}(y_c)} $$</p>
+<p>where $a_i$ is the $i$-th neuron's activation at the chosen layer and $y_c$ is the country label.</p>
+<p>It will only attack linear, single-neuron correlation. No individual neuron activation should rise or fall on average with country (basically the correlation rho^2 term in that loss function).</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-20.png" alt="Figure">
+    <p class="caption">Decorrelation applied to number instead of country: the layer-2 dip now lands on number.</p>
+  </div>
+
+  <p>But maybe not too strong:</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-21.png" alt="Figure">
+    <p class="caption">Decorrelation on country with too strong a penalty (lambda=100): country is destroyed everywhere rather than folded into a band.</p>
+  </div>
+
+  <h3 id="More-plots-on-decorrelation-method-($%5Clambda-=-20$)">More plots on decorrelation method ($\lambda = 20$)</h3><p>In the main text we showed PCA blobs colored by certain features. In constrast, if we use <code>sentiment</code> instead of <code>body_part</code> as in Task 3, we get:</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-22.png" alt="Figure">
+    <p class="caption">The decorrelation PC1xPC2 plane colored by country x number x sentiment. Sentiment does not organize the blobs (a negative control).</p>
+  </div>
+
+  <p>And we can show a similar plot for the original puzzle, just for reference:</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-23.png" alt="Figure">
+    <p class="caption">The original puzzle's activations colored by country x food: here the food direction organizes the structure.</p>
+  </div>
+
+  <p>Finally, here is the cosine similarity plot:</p>
+
+  <div class="figure">
+    <img src="images/bluedot-nonlinear-feature/fig-24.png" alt="Figure">
+    <p class="caption">Cosine-similarity matrix for the decorrelation model with its country axis added; the band now aligns with a different feature's direction than in the original.</p>
+  </div>
+
+  <p>When you penalize country↔neuron correlation, the model doesn't give up the band, but it moves it onto the number axis instead of food.</p>
+<p>I am still not yet sure about how, or which methods allow, to select for a particular set of features on which to park information (I did not spend much time on this item, but it is for future work).</p>
+<p>Running with several $\lambda$ values you can get</p>
+<table>
+<thead><tr>
+  <th style="text-align:left">model</th>
+  <th style="text-align:left">country still decodable?</th>
+  <th style="text-align:left">host axis (|cos| with band)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="text-align:left">original</td>
+  <td style="text-align:left">yes (0.95)</td>
+  <td style="text-align:left">food (-0.92) strong</td>
+</tr>
+<tr>
+  <td style="text-align:left">decor λ=20</td>
+  <td style="text-align:left">yes (0.97)</td>
+  <td style="text-align:left">number (-0.77)</td>
+</tr>
+<tr>
+  <td style="text-align:left">decor λ=50 s1</td>
+  <td style="text-align:left">yes (0.95)</td>
+  <td style="text-align:left">body_part (+0.23) weak</td>
+</tr>
+<tr>
+  <td style="text-align:left">decor λ=50 s3</td>
+  <td style="text-align:left">yes (0.95)</td>
+  <td style="text-align:left">question (+0.44)</td>
+</tr>
+<tr>
+  <td style="text-align:left">decor λ=50 s4</td>
+  <td style="text-align:left">yes (0.95)</td>
+  <td style="text-align:left">question (+0.54)</td>
+</tr>
+<tr>
+  <td style="text-align:left">decor λ=100 / s2</td>
+  <td style="text-align:left">no (~0.51)</td>
+  <td style="text-align:left">(country destroyed; cosines are noise)</td>
+</tr>
+</tbody>
+</table>
+<p>Hence, with what I did all of this looks like an optimization accident.</p>
+
+</article>
+
+<!-- Lightbox (click-to-zoom images) -->
+<div class="lightbox-overlay" onclick="this.classList.remove('active')">
+  <img src="" alt="">
+</div>
+
+<script>
+document.querySelectorAll('article img').forEach(function(img) {
+  img.addEventListener('click', function() {
+    var overlay = document.querySelector('.lightbox-overlay');
+    overlay.querySelector('img').src = this.src;
+    overlay.classList.add('active');
+  });
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.querySelector('.lightbox-overlay').classList.remove('active');
+  }
+});
+</script>
+
+</body>
+</html>
