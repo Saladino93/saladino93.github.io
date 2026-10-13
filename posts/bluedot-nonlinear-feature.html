@@ -12,18 +12,20 @@
 <body>
 
 <nav>
-  <a href="../index.html">Omar Darwish</a>
+  <a href="../index.html">Home</a>
   <a href="../blog.html">Blog</a>
 </nav>
+
+<hr>
 
 <!-- AUTO-GENERATED DRAFT by website/build_blog.py.
      Add sidenotes + figure captions, trim scratch, then rename to bluedot-nonlinear-feature.html. -->
 <article>
 
   <h1>A non-linear feature in a tiny classifier</h1>
-  <p class="post-meta">June 2026</p>
+  <p class="post-meta">June 2026 · Last edited October 14, 2026</p>
 
-  <p>In this post I am going to walk through my approach for an <a href="https://github.com/SamDower/bluedot-tais-puzzle">AI puzzle challenge</a> organized by BlueDot. The goal was to dissect a simple trained machine learning model and understand it. If you are new to technical AI safety, I think it is a good way to get your hands dirty and practice basics that could be useful for addressing larger models.</p>
+  <p><em>In this post I am going to walk through my approach for an <a href="https://github.com/SamDower/bluedot-tais-puzzle">AI puzzle challenge</a> organized by BlueDot. The goal was to dissect a simple trained machine learning model and understand it. If you are new to technical AI safety, I think it is a good way to get your hands dirty and practice basics that could be useful for addressing larger models.</em></p>
 <h2 id="The-challenge">The challenge</h2><p>I will report verbatim from the puzzle's <a href="https://github.com/SamDower/bluedot-tais-puzzle/puzzle.ipynb">text</a>. The organizers trained a small classifier on short text inputs to predict eight binary features simultaneously, at over 95% accuracy on each:</p>
 <ul>
 <li><code>number</code> contains a digit or written-out number (3, seven, …)</li>
